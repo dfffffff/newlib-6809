@@ -42,7 +42,7 @@
 #define _POINTER_INT short
 #endif
 
-#if defined(__mc68hc11__) || defined(__mc68hc12__) || defined(__mc68hc1x__)
+#if defined(__m6809__) || defined(__mc68hc11__) || defined(__mc68hc12__) || defined(__mc68hc1x__)
 #undef INT_MAX
 #undef UINT_MAX
 #define INT_MAX __INT_MAX__
