@@ -45,8 +45,12 @@ _BEGIN_STD_C
 #endif
 
 #if defined(__m6809__)
-/* D, X, Y, U, S, PC, DP, CC, plus some padding */
-#define _JBLEN 10
+/*
+ * D, X are not saved.
+ * Y, U, S, PC, DP, CC, plus some padding.
+ */
+#define _JBLEN  ((4*2+2*1+6)/2)
+#define _JBTYPE short
 #endif
 
 #if defined(__Z8001__) || defined(__Z8002__)

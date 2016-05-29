@@ -1,70 +1,75 @@
 ;;;
 ;;; Copyright 2006 by Brian Dominy <brian@oddchange.com>
 ;;;
+;;; Changes by David Flamand <dflamand@gmail.com> (May 2016)
+;;;  added support for -mdret
+;;;  added check for zero in longjmp return value
+;;;  reduced size of jmp_buf
+;;;  some optimizations
+;;;
 ;;; setjmp/longjmp for m6809
 ;;;
+
+;;; TODO:
+;;; - Support nonstandard compiler options
+;;; - Support other state (i.e. HW registers for various platforms)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; The jmp_buf is structured as follows:
 ;
 ; Offset       Value
-; 0            A
-; 1            B
-; 2-3          X
-; 4-5          Y
-; 6-7          U
-; 8-9          S
-; 10-11        PC
-; 12           DP
-; 13           CC
+; 0-1          Y
+; 2-3          U
+; 4-5          S
+; 6-7          PC
+; 8            DP
+; 9            CC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; TODO:
-;;; - Reduce size of jmp_buf a little more
-;;; - Optimize
-;;; - Support nonstandard compiler options
-;;; - Support other state (i.e. HW registers for various platforms)
+SAVE_Y = 0
+SAVE_U = 2
+SAVE_S = 4
+SAVE_PC = 6
+SAVE_DP_CC = 8
 
-SAVE_A = 0
-SAVE_B = 1
-SAVE_X = 2
-SAVE_Y = 4
-SAVE_U = 6
-SAVE_S = 8
-SAVE_PC = 10
-SAVE_DP = 12
-SAVE_CC = 13
+SETJMP_S = 2
 
-SETJMP_S = 4
-
-.module sjlj
-.area .text
+	.module setjmp.S
+	.area .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; int setjmp(jmp_buf env)
 ;
 ; A pointer to env is passed in register X.
-; The return value is placed in X.
+; The return value is placed in X or D.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 	.globl _setjmp 
 _setjmp:
-	pshs y,u              ; Save registers gcc requires
-	std SAVE_A,x          ; Save the A/B registers
+	;-----------------------------------------------
+	; TODO: this sequence assumes that the
+	; function argument is passed directly in X.
+	; If all args go onto the stack, this is wrong.
+	;-----------------------------------------------
+	                      ; X = env
+	pshs u                ; Save nonvolatile U register
 	sty SAVE_Y,x          ; Save the Y register
 	stu SAVE_U,x          ; Save the U register
-	leay SETJMP_S+2,s
-	sty SAVE_S,x          ; Save the S register
-	ldy SETJMP_S,s
-	sty SAVE_PC,x         ; Save the PC register
-
+	leau SETJMP_S+2,s
+	stu SAVE_S,x          ; Save the S register
+	ldd SETJMP_S,s
+	std SAVE_PC,x         ; Save the PC register
 	tfr dp,a
 	tfr cc,b
-	std SAVE_DP,x         ; Save the DP/CC registers
-
-	ldx #0                ; Return zero
-	puls y,u,pc           ; Restore nonvolatile registers
+	std SAVE_DP_CC,x      ; Save the DP/CC registers
+#ifdef __DRET__
+	clra                  ; Return zero in D
+	clrb
+#else
+	ldx #0                ; Return zero in X
+#endif
+	puls u,pc             ; Restore U and PC registers (returning)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,25 +87,21 @@ _longjmp:
 	; function argument is passed directly in X.
 	; If all args go onto the stack, this is wrong.
 	;-----------------------------------------------
-                         ; X = env
-	ldd 2,s               ; D = return value
-
-	;---------------------------------------------------------
-	; TODO : storing the return value and then reloading it
-	; at the end of the function is wasteful.  Just reference
-	; it from the stack directly at the end, and eliminate
-	; the ldd/std here.
-	;---------------------------------------------------------
-	std SAVE_A,x          ; Store return value into jmp_buf
-
+	                      ; X = env
+	ldd 2,s               ; D = val
+	bne _l1
+	incb                  ; Zero is not allowed
+_l1:	lds SAVE_S,x          ; Restore the S register
+	ldu SAVE_PC,x         ; Load the PC register
+	pshs u,d              ; Save PC and return value onto stack
 	ldu SAVE_U,x          ; Restore the U register
-	lds SAVE_S,x          ; Restore the S register
-	lda SAVE_DP,x
-	tfr a,dp              ; Restore the DP register
-	lda SAVE_CC,x
-	ldy SAVE_PC,x
-	pshs y,a              ; Push restored CC/PC onto stack
 	ldy SAVE_Y,x          ; Restore the Y register
-	ldx SAVE_A,x          ; Restore the X register (return val)
-	puls cc,pc            ; Restore CC and PC registers (returning)
+	ldd SAVE_DP_CC,x      ; Load the DP/CC registers
+	tfr a,dp              ; Restore the DP register
+	tfr b,cc              ; Restore the CC register
+#ifdef __DRET__
+	puls d,pc             ; Restore D and PC registers (returning)
+#else
+	puls x,pc             ; Restore X and PC registers (returning)
+#endif
 
