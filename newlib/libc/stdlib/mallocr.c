@@ -303,8 +303,10 @@ extern "C" {
 #define HAVE_MMAP 0
 #define MORECORE(size) _sbrk_r(reent_ptr, (size))
 #define MORECORE_CLEARS 0
+#ifndef __SINGLE_THREAD__
 #define MALLOC_LOCK __malloc_lock(reent_ptr)
 #define MALLOC_UNLOCK __malloc_unlock(reent_ptr)
+#endif
 
 #ifdef __CYGWIN__
 # undef _WIN32
@@ -319,12 +321,14 @@ extern "C" {
 #endif
 #endif
 
+#ifndef __SINGLE_THREAD__
 #if __STD_C
 extern void __malloc_lock(struct _reent *);
 extern void __malloc_unlock(struct _reent *);
 #else
 extern void __malloc_lock();
 extern void __malloc_unlock();
+#endif
 #endif
 
 #if __STD_C
