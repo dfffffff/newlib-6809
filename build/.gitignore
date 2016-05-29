@@ -1,0 +1,8 @@
+etc/
+m6809-unknown-none/
+config.log
+config.status
+Makefile
+make.sh
+serdep.tmp
+
