@@ -49,6 +49,11 @@
 #define UINT_MAX (__INT_MAX__ * 2U + 1)
 #define _POINTER_INT short
 #endif
+#if defined(__m6809__)
+/*#define _REENT_SMALL  <- code is bigger */
+#define __SINGLE_THREAD__
+#define __SMALL_BITFIELDS
+#endif
 
 #ifdef ___AM29K__
 #define _FLOAT_RET double
