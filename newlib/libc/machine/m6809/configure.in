@@ -1,4 +1,4 @@
-dnl This is the newlib/libc/machine/m68k configure.in file.
+dnl This is the newlib/libc/machine/m6809 configure.in file.
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)

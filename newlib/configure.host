@@ -430,16 +430,15 @@ case "${host}" in
 	##newlib_cflags="${newlib_cflags} -idirafter ${gcc_dir}include"
 	;;
   m6809-coco-*)
-   sys_dir=coco
+	sys_dir=coco
 	have_crt0="no"
-   ;;
+	;;
   m6809-*-*)
-   sys_dir=m6809sim
+	sys_dir=m6809sim
 	have_crt0="no"
-   ;;
+	;;
   m68hc11-*-*|m6811-*-*|m6812-*-*|m68hc12-*-*)
 	;;
-
   m68k-sun-sunos*)
 	unix_dir=unix
 	;;
