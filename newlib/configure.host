@@ -643,7 +643,7 @@ case "${host}" in
 	syscall_dir=syscalls
 	;;
   m6809-*-*)
-	newlib_cflags="${newlib_cflags} -DNO_EXEC -DSMALL_MEMORY -DSIGNAL_PROVIDED -DMISSING_SYSCALL_NAMES -DNO_FLOATING_POINT -D_NO_POS_ARGS"
+	newlib_cflags="${newlib_cflags} -DNO_EXEC -DSMALL_MEMORY -DSIGNAL_PROVIDED -DMISSING_SYSCALL_NAMES -DNO_FLOATING_POINT"
   	;;
   m68hc11-*-*|m6811-*-*|m68hc12-*-*|m6812-*-*)
 	newlib_cflags="${newlib_cflags} -DNO_EXEC -DABORT_PROVIDED -DSMALL_MEMORY -DMISSING_SYSCALL_NAMES"
