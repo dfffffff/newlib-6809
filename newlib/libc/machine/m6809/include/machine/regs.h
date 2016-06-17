@@ -1,4 +1,3 @@
-
 #ifndef __M6809_REGS_H
 #define __M6809_REGS_H
 
@@ -31,9 +30,17 @@ extern inline unsigned int getstack (void)
 }
 
 
-extern inline void setdp (const unsigned short dp)
+extern inline void setdp (const unsigned char dp)
 {
-	asm __volatile__ ("tfr\tb, dp" :: "q" (dp));
+	asm __volatile__ ("tfr\t%0,dp" :: "q" (dp));
+}
+
+
+extern inline unsigned char getdp (void)
+{
+	unsigned char result;
+	asm __volatile__ ("tfr\tdp,%0" : "=q" (result));
+	return result;
 }
 
 
