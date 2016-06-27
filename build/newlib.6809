@@ -1,9 +1,33 @@
 #!/bin/sh
 
+set -e
 unset MAKEFLAGS
 prefix=/usr/local
+machine=m6809
 target=m6809-unknown-none
 sudo=sudo
+multilib=enable
+#multilib=disable
+
+HEADERS_M="ansi.h endian.h fastmath.h ieeefp.h malloc.h param.h setjmp.h \
+	stdlib.h time.h types.h _types.h"
+HEADERS_S="cdefs.h config.h dirent.h errno.h fcntl.h features.h file.h lock.h \
+	param.h queue.h reent.h signal.h stat.h stdio.h string.h time.h timeb.h \
+	times.h types.h _types.h unistd.h"
+HEADERS="alloca.h _ansi.h argz.h assert.h ctype.h dirent.h envz.h errno.h \
+	fastmath.h fcntl.h getopt.h iconv.h ieeefp.h inttypes.h langinfo.h \
+	libgen.h limits.h locale.h malloc.h math.h newlib.h reent.h search.h \
+	setjmp.h signal.h stdint.h stdio.h stdlib.h string.h time.h unctrl.h \
+	unistd.h wchar.h wctype.h"
+
+multilib_dirs()
+{
+	if [ $multilib = enable ]; then
+		${prefix}/bin/${target}-gcc -print-multi-lib | sed -n 's/\(^[^;]*\).*$/\1/p'
+	else
+		echo .
+	fi
+}
 
 while [ "x$1" != "x" ]; do
 case $1 in
@@ -19,29 +43,59 @@ case $1 in
 	config)
 		CC_FOR_TARGET="${prefix}/bin/${target}-gcc" \
 		AR_FOR_TARGET="${prefix}/bin/${target}-ar" \
+		AS_FOR_TARGET="${prefix}/bin/${target}-as" \
 		LD_FOR_TARGET="${prefix}/bin/${target}-ld" \
 		RANLIB_FOR_TARGET="${prefix}/bin/${target}-ranlib" \
-		../configure --prefix=${prefix} --target="${target}" --disable-multilib \
-		   --program-prefix=${target}- \
+		../configure --prefix=${prefix} --target="${target}" \
+			--$multilib-multilib --program-prefix=${target}- \
 			--disable-malloc-debugging --with-gnu-ld --without-pic \
-			--enable-target-optspace
+			--enable-target-optspace --enable-newlib-iconv
 		;;
 	make)
-		make
+		make -s configure-target-newlib
+		make -s all-target-newlib RANLIB_FOR_TARGET=true
+		DIR=`pwd`
+		for dir in `multilib_dirs`; do
+			for lib in c m; do
+				file=${target}/$dir/newlib/lib$lib.a
+				sed 's/ lib_a-/ /' <"$file" >"$file.tmp" && mv "$file.tmp" "$file"
+			done
+			mkdir -p ${target}/$dir/newlib/libg
+			cd ${target}/$dir/newlib/libg
+			rm -f ../libg.a
+			${prefix}/bin/${target}-ar cr ../libg.a
+			ln -f ../libg.a libg.a
+			cd $DIR
+		done
 		;;
 	install)
-		echo "Installing libc.a ..."
-		cp -p ${target}/newlib/libc/libc.a ${prefix}/${target}/lib
-		${prefix}/bin/${target}-ar --cache ${prefix}/${target}/lib/libc.a
-		echo "Installing libm.a ..."
-		cp -p ${target}/newlib/libm/libm.a ${prefix}/${target}/lib
-		${prefix}/bin/${target}-ar --cache ${prefix}/${target}/lib/libm.a
+		for dir in `multilib_dirs`; do
+			dst=${prefix}/${target}/lib/$dir
+			mkdir -p $dst
+			for lib in c m g; do
+				echo "Installing lib$lib.a in $dst ..."
+				cp ${target}/$dir/newlib/lib$lib.a $dst
+				${prefix}/bin/${target}-ranlib $dst/lib$lib.a
+			done
+		done
+		echo "Installing include files ..."
+		FILES= ; for H in $HEADERS; do FILES="$FILES ../newlib/libc/include/$H"; done
 		mkdir -p ${prefix}/${target}/include
-		echo "Installing include files..."
-		cp -pR ../newlib/libc/include/* ${prefix}/${target}/include
-		cp -pR ../newlib/libc/machine/m6809/include/* ${prefix}/${target}/include
-		echo "Ensuring write permissions on include files..."
-		cd ${prefix}/${target}/include && find . -name "*.h" | xargs chmod +w
+		cp $FILES ${prefix}/${target}/include
+		FILES= ; for H in $HEADERS_M; do FILES="$FILES ../newlib/libc/include/machine/$H"; done
+		mkdir -p ${prefix}/${target}/include/machine
+		cp $FILES ${prefix}/${target}/include/machine
+		FILES= ; for H in $HEADERS_S; do FILES="$FILES ../newlib/libc/include/sys/$H"; done
+		mkdir -p ${prefix}/${target}/include/sys
+		cp $FILES ${prefix}/${target}/include/sys
+		if [ -d "../newlib/libc/sys/$target_arg/include" ]; then
+			cp -r "../newlib/libc/sys/$target_arg/include" ${prefix}/${target}
+		fi
+		if [ -d "../newlib/libc/machine/$machine/include" ]; then
+			cp -r "../newlib/libc/machine/$machine/include" ${prefix}/${target}
+		fi
+#		echo "Ensuring write permissions on include files ..."
+#		cd ${prefix}/${target}/include && find . -name "*.h" | xargs chmod +w
 		echo "Done."
 		;;
 	rebuild)
