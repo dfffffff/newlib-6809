@@ -20,7 +20,8 @@ enum cc_flags
 	CC_E = 0x80,
 };
 
-register unsigned char __cc asm ("cc");
+/* for bit testing CC reg */
+const volatile register unsigned char __cc asm ("cc");
 
 
 /*
