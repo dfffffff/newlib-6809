@@ -1,6 +1,13 @@
 #ifndef __M6809_REGS_H
 #define __M6809_REGS_H
 
+#ifdef __NO_INLINE__
+#define ASM_DECL static
+#else
+#define ASM_DECL extern inline
+#endif
+
+
 enum cc_flags
 {
 	CC_CARRY = 0x1,
@@ -16,32 +23,103 @@ enum cc_flags
 register unsigned char __cc asm ("cc");
 
 
-extern inline void setstack (const unsigned int s)
+/*
+	WARNING: setstack() and getstack() must be used with precaution.
+	Only one local variable is allowed, they must be used with
+	function without or with one parameter,
+	also beware of function inlining and tail call optimization.
+
+	please consider this valid use case:
+
+	int add3 (int param1, int param2, int param3)
+	{
+		int result;
+		result = param1 + param2 + param3;
+		return result;
+	}
+
+	// make sure no inlining occur, can have one parameter
+	__attribute__((noinline)) void dosomework (int value)
+	{
+		// no restriction here
+		int result;
+		result = add3(value, 2, 3);
+		printf("%s=%d\n", "result", result);
+	}
+
+	// make sure no inlining occur, no parameter
+	__attribute__((noinline)) void func (void)
+	{
+		int oldstack;          // ok for one local variable
+		oldstack = getstack();
+		setstack(0xC000);
+		dosomework(1);         // ok for one parameter function call
+		setstack(oldstack);
+		__builtin_blockage();  // prevent tail call optimization on setstack
+	}
+
+	int main (...)
+	{
+		...
+		func();
+		...
+		return ...;
+	}
+*/
+
+#ifdef __NO_INLINE__
+ASM_DECL __attribute__((naked)) void setstack (const unsigned int s)
 {
-	asm __volatile__ ("lds\t%0" :: "g" (s) : "d");
+#if defined(__ABI_STACK__)
+#error setstack() unsupported at (__NO_INLINE__ && __ABI_STACK__)
+	/*asm volatile ("puls\td,x\n\tleas\t-2,x\n\ttfr\td,pc");*/
+#elif defined(__ABI_BX__)
+	asm volatile ("puls\td\n\tleas\t,x\n\ttfr\td,pc");
+#else
+#error UNKNOWN ABI
+#endif
 }
+#else
+ASM_DECL void setstack (const unsigned int s)
+{
+	asm volatile ("leas\t,%0" :: "a" (s));
+}
+#endif
 
 
-extern inline unsigned int getstack (void)
+#ifdef __NO_INLINE__
+ASM_DECL __attribute__((naked)) unsigned int getstack (void)
+{
+#ifdef __DRET__
+	asm volatile ("leax\t2,s\n\ttfr\tx,d\n\trts");
+#else
+	asm volatile ("leax\t2,s\n\trts");
+#endif
+}
+#else
+ASM_DECL unsigned int getstack (void)
 {
 	unsigned int result;
-	asm __volatile__ ("lea%0\t,s" : "=a" (result));
+	asm volatile ("lea%0\t,s" : "=a" (result));
 	return result;
 }
+#endif
 
 
-extern inline void setdp (const unsigned char dp)
+ASM_DECL void setdp (const unsigned char dp)
 {
-	asm __volatile__ ("tfr\t%0,dp" :: "q" (dp));
+	asm volatile ("tfr\t%0,dp" :: "q" (dp));
 }
 
 
-extern inline unsigned char getdp (void)
+ASM_DECL unsigned char getdp (void)
 {
 	unsigned char result;
-	asm __volatile__ ("tfr\tdp,%0" : "=q" (result));
+	asm volatile ("tfr\tdp,%0" : "=q" (result));
 	return result;
 }
 
+
+#undef ASM_DECL
 
 #endif /* __M6809_REGS_H */
