@@ -3,14 +3,12 @@
 ;;;
 ;;; memcpy for m6809
 ;;;
-;;;  support for -mdret
+;;;  support for -mdret and -mabi=stack
 ;;;  optimization: copy 2 byte at a time
 ;;;
-;;;  TODO: support stack only args
-;;;
 
-	.module memcpy.S
-	.area .text
+	.module	memcpy.S
+	.area	.text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -18,28 +16,44 @@
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	.globl _memcpy
+	.globl	_memcpy
 _memcpy:
+#ifdef __ABI_STACK__
+	pshs	u,y
+	ldd	10,s
+	beq	l2
+	ldu	8,s
+	ldy	6,s
+#else
 	pshs	u,y,x
 	ldd	10,s
-	beq	_l2
-	leay	,x
-	tfr	d,x
+	beq	l2
 	ldu	8,s
+	leay	,x
+#endif
+	tfr	d,x
 	bitb	#1
-	beq	_l1
+	beq	l1
 	ldb	,u+
 	stb	,y+
 	leax	-1,x
-	beq	_l2
-_l1:	ldd	,u++
+	beq	l2
+l1:	ldd	,u++
 	std	,y++
 	leax	-2,x
-	bne	_l1
-_l2:
+	bne	l1
+l2:
+#ifdef __ABI_STACK__
+#ifdef __DRET__
+	ldd	6,s
+#else
+	ldx	6,s
+#endif
+	puls	y,u,pc
+#else
 #ifdef __DRET__
 	puls	d,y,u,pc
 #else
 	puls	x,y,u,pc
 #endif
-
+#endif
