@@ -94,6 +94,12 @@ case $1 in
 		if [ -d "../newlib/libc/machine/$machine/include" ]; then
 			cp -r "../newlib/libc/machine/$machine/include" ${prefix}/${target}
 		fi
+		{
+			echo '#include <machine/endian.h>'
+			echo '#define __BYTE_ORDER BYTE_ORDER'
+			echo '#define __BIG_ENDIAN BIG_ENDIAN'
+			echo '#define __LITTLE_ENDIAN LITTLE_ENDIAN'
+		} > ${prefix}/${target}/include/endian.h
 #		echo "Ensuring write permissions on include files ..."
 #		cd ${prefix}/${target}/include && find . -name "*.h" | xargs chmod +w
 		echo "Done."
