@@ -21,7 +21,7 @@ enum cc_flags
 };
 
 /* for bit testing CC reg */
-const volatile register unsigned char __cc asm ("cc");
+register const volatile unsigned char __cc asm ("cc");
 
 
 /*
@@ -74,7 +74,7 @@ ASM_DECL __attribute__((naked)) void setstack (const unsigned int s)
 #if defined(__ABI_STACK__)
 #error setstack() unsupported at (__NO_INLINE__ && __ABI_STACK__)
 	/*asm volatile ("puls\td,x\n\tleas\t-2,x\n\ttfr\td,pc");*/
-#elif defined(__ABI_BX__)
+#elif defined(__ABI_BX__) || defined(__ABI_REGS__)
 	asm volatile ("puls\td\n\tleas\t,x\n\ttfr\td,pc");
 #else
 #error UNKNOWN ABI
