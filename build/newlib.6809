@@ -5,6 +5,7 @@ unset MAKEFLAGS
 prefix=/usr/local
 machine=m6809
 target=m6809-unknown-none
+target_arg=m6809sim
 sudo=sudo
 multilib=enable
 #multilib=disable
