@@ -2,13 +2,12 @@
 
 set -e
 unset MAKEFLAGS
-prefix=/usr/local
-machine=m6809
-target=m6809-sim-none
-target_arg=m6809sim
-sudo=sudo
-multilib=enable
-#multilib=disable
+prefix=${prefix:-/usr/local}
+machine=${machine:-m6809}
+target=${target:-m6809-sim-none}
+target_arg=${target_arg:-m6809sim}
+sudo=${sudo:-sudo}
+multilib=${multilib:-enable}
 
 HEADERS_M="ansi.h endian.h fastmath.h ieeefp.h malloc.h param.h setjmp.h \
 	stdlib.h time.h types.h _types.h"
